@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { plaidClient } from "../services/plaid-client.js";
 import { tokenStore } from "../services/token-store.js";
+import { config } from "../config.js";
 
 export const loginRouter = Router();
 
@@ -16,7 +17,7 @@ loginRouter.post("/link-token", async (req: Request, res: Response) => {
   const response = await plaidClient.linkTokenCreate({
     user: { client_user_id: userId },
     client_name: "PlaidConnect",
-    products: ["identity" as any],
+    products: config.plaid.products as any,
     country_codes: ["US" as any],
     language: "en",
   });
@@ -44,42 +45,54 @@ loginRouter.post("/verify", async (req: Request, res: Response) => {
   const accessToken = exchangeResponse.data.access_token;
   const itemId = exchangeResponse.data.item_id;
 
-  // Fetch identity data from the connected bank account
-  const identityResponse = await plaidClient.identityGet({
-    access_token: accessToken,
-  });
+  // Try to fetch identity data — only works if the identity product is enabled
+  let identities: unknown[] = [];
+  let availableProducts: string[] = [];
+  let billedProducts: string[] = [];
 
-  const owners = identityResponse.data.accounts.flatMap(
-    (account) => account.owners
-  );
+  try {
+    const identityResponse = await plaidClient.identityGet({
+      access_token: accessToken,
+    });
 
-  // Deduplicate owners by name
-  const seen = new Set<string>();
-  const uniqueOwners = owners.filter((owner) => {
-    const key = JSON.stringify(owner.names);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    const owners = identityResponse.data.accounts.flatMap(
+      (account) => account.owners
+    );
 
-  // Extract verified identity details
-  const identities = uniqueOwners.map((owner) => ({
-    names: owner.names,
-    emails: owner.emails.map((e) => ({ address: e.data, primary: e.primary })),
-    phoneNumbers: owner.phone_numbers.map((p) => ({
-      number: p.data,
-      type: p.type,
-      primary: p.primary,
-    })),
-    addresses: owner.addresses.map((a) => ({
-      street: a.data.street,
-      city: a.data.city,
-      region: a.data.region,
-      postalCode: a.data.postal_code,
-      country: a.data.country,
-      primary: a.primary,
-    })),
-  }));
+    // Deduplicate owners by name
+    const seen = new Set<string>();
+    const uniqueOwners = owners.filter((owner) => {
+      const key = JSON.stringify(owner.names);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    identities = uniqueOwners.map((owner) => ({
+      names: owner.names,
+      emails: owner.emails.map((e) => ({ address: e.data, primary: e.primary })),
+      phoneNumbers: owner.phone_numbers.map((p) => ({
+        number: p.data,
+        type: p.type,
+        primary: p.primary,
+      })),
+      addresses: owner.addresses.map((a) => ({
+        street: a.data.street,
+        city: a.data.city,
+        region: a.data.region,
+        postalCode: a.data.postal_code,
+        country: a.data.country,
+        primary: a.primary,
+      })),
+    }));
+
+    availableProducts = identityResponse.data.item.available_products;
+    billedProducts = identityResponse.data.item.billed_products;
+  } catch (_err) {
+    // Identity not available — use the configured products
+    availableProducts = config.plaid.products;
+    billedProducts = config.plaid.products;
+  }
 
   // Store the item
   tokenStore.save({
@@ -88,8 +101,8 @@ loginRouter.post("/verify", async (req: Request, res: Response) => {
     userId,
     institutionId: null,
     institutionName: null,
-    availableProducts: identityResponse.data.item.available_products,
-    billedProducts: identityResponse.data.item.billed_products,
+    availableProducts,
+    billedProducts,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -99,6 +112,6 @@ loginRouter.post("/verify", async (req: Request, res: Response) => {
     userId,
     itemId,
     identities,
-    requestId: identityResponse.data.request_id,
+    products: availableProducts,
   });
 });

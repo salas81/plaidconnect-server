@@ -7,6 +7,7 @@ export const config = {
     secret: process.env.PLAID_SECRET || "",
     env: process.env.PLAID_ENV || "sandbox",
     apiVersion: process.env.PLAID_API_VERSION || "2020-09-14",
+    products: (process.env.PLAID_PRODUCTS || "transactions").split(",").map((p) => p.trim()),
   },
   server: {
     port: parseInt(process.env.PORT || "3000", 10),
