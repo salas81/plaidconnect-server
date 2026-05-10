@@ -164,22 +164,16 @@
       linkBtn.disabled = true;
 
       try {
-        const body = {
-          userId,
-          products: getSelectedProducts()
-        };
-        const institutionId = $('institutionId').value.trim();
-        if (institutionId) {
-          body.institutionId = institutionId;
-        }
-
         const res = await fetch(`${url}/api/link/token/create`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify(body)
+          body: JSON.stringify({
+            userId,
+            products: getSelectedProducts()
+          })
         });
 
         if (!res.ok) {
@@ -280,7 +274,8 @@
 
       show('Opening Plaid Link...', 'info');
 
-      const handler = Plaid.create({
+      const institutionId = $('institutionId').value.trim();
+      const plaidConfig = {
         token: token,
         onSuccess: (public_token, metadata) => {
           exchangeToken(public_token);
@@ -296,8 +291,12 @@
         onEvent: (eventName, metadata) => {
           // Optional: log events
         }
-      });
+      };
+      if (institutionId) {
+        plaidConfig.institution_id = institutionId;
+      }
 
+      const handler = Plaid.create(plaidConfig);
       handler.open();
     });
 
