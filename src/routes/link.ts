@@ -15,15 +15,24 @@ linkRouter.post("/token/create", async (req: Request, res: Response) => {
 
   const requestedProducts: string[] = products || ["auth", "transactions"];
 
-  // Products that MUST be consented. Institutions that don't support ALL of
-  // these are hidden from Link. Put user-selected products here so they are
-  // explicitly consented (required for liabilities/identity to work reliably).
-  const requiredProducts = requestedProducts;
+  // Core products that most institutions support — used to filter the list.
+  // Keep this minimal so the maximum number of institutions appear.
+  const coreProducts = requestedProducts.filter(
+    (p) => p === "auth" || p === "transactions"
+  );
+
+  // Everything else goes into additional_consented_products so consent is
+  // collected in the same Link flow WITHOUT filtering out institutions that
+  // don't support them. This lets you grant access to all products at once.
+  const additionalConsented = requestedProducts.filter(
+    (p) => p !== "auth" && p !== "transactions"
+  );
 
   const linkTokenResponse = await plaidClient.linkTokenCreate({
     user: { client_user_id: userId },
     client_name: "PlaidConnect",
-    products: (requiredProducts as any).length ? (requiredProducts as any) : ["auth" as any],
+    products: (coreProducts as any).length ? (coreProducts as any) : ["auth" as any],
+    additional_consented_products: additionalConsented.length ? (additionalConsented as any) : undefined,
     country_codes: (countryCodes as any) || ["US" as any],
     language: language || "en",
     redirect_uri: redirectUri,
