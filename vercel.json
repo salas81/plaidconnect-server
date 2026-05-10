@@ -1,7 +1,8 @@
 {
   "version": 2,
-  "name": "plaidconnect",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.ts" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
