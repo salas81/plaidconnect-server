@@ -1,4 +1,6 @@
 import "express-async-errors";
+import { readFileSync } from "fs";
+import { join } from "path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -44,6 +46,18 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.use(express.json({ limit: "1mb" }));
+
+// Serve frontend HTML at root (Vercel serverless)
+app.get("/", (_req, res) => {
+  try {
+    const htmlPath = join(process.cwd(), "public", "index.html");
+    const html = readFileSync(htmlPath, "utf-8");
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  } catch {
+    res.status(500).send("Frontend not available");
+  }
+});
 
 // Health check — no auth required
 app.get("/health", (_req, res) => {
