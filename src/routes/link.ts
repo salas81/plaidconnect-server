@@ -13,10 +13,17 @@ linkRouter.post("/token/create", async (req: Request, res: Response) => {
     return;
   }
 
+  const requestedProducts: string[] = products || ["auth", "transactions"];
+
+  // Products that MUST be consented. Institutions that don't support ALL of
+  // these are hidden from Link. Put user-selected products here so they are
+  // explicitly consented (required for liabilities/identity to work reliably).
+  const requiredProducts = requestedProducts;
+
   const linkTokenResponse = await plaidClient.linkTokenCreate({
     user: { client_user_id: userId },
     client_name: "PlaidConnect",
-    products: (products as any) || ["auth", "transactions"],
+    products: (requiredProducts as any).length ? (requiredProducts as any) : ["auth" as any],
     country_codes: (countryCodes as any) || ["US" as any],
     language: language || "en",
     redirect_uri: redirectUri,
@@ -26,6 +33,39 @@ linkRouter.post("/token/create", async (req: Request, res: Response) => {
   res.json({
     linkToken: linkTokenResponse.data.link_token,
     expiration: linkTokenResponse.data.expiration,
+  });
+});
+
+// Update mode: create a link token for an existing item to add new products
+linkRouter.post("/token/update", async (req: Request, res: Response) => {
+  const { itemId, products } = req.body as { itemId?: string; products?: string[] };
+
+  if (!itemId) {
+    res.status(400).json({ error: "itemId is required" });
+    return;
+  }
+
+  const item = tokenStore.getByItemId(itemId);
+  if (!item) {
+    res.status(404).json({ error: "Item not found" });
+    return;
+  }
+
+  const requestedProducts: string[] = products || ["liabilities"];
+
+  const linkTokenResponse = await plaidClient.linkTokenCreate({
+    user: { client_user_id: item.userId },
+    client_name: "PlaidConnect",
+    products: (requestedProducts as any).length ? (requestedProducts as any) : undefined,
+    country_codes: ["US" as any],
+    language: "en",
+    access_token: item.accessToken,
+  });
+
+  res.json({
+    linkToken: linkTokenResponse.data.link_token,
+    expiration: linkTokenResponse.data.expiration,
+    itemId,
   });
 });
 

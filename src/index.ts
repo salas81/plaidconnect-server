@@ -13,6 +13,7 @@ import { authRouter } from "./routes/auth.js";
 import { itemsRouter } from "./routes/items.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 import { loginRouter } from "./routes/login.js";
+import { liabilitiesRouter } from "./routes/liabilities.js";
 import { errorHandler } from "./middleware/error-handler.js";
 
 validateConfig();
@@ -80,6 +81,9 @@ app.use("/api/auth", authRouter);
 // Login — authenticate users via Plaid Identity (bank-verified login)
 app.use("/api/login", loginRouter);
 
+// Liabilities — fetch credit card and loan liabilities
+app.use("/api/liabilities", liabilitiesRouter);
+
 // Sandbox — testing utilities (only in sandbox environment)
 if (config.plaid.env === "sandbox") {
   const { sandboxRouter } = await import("./routes/sandbox.js");
@@ -109,6 +113,7 @@ app.listen(config.server.port, "0.0.0.0", () => {
   console.log(`  GET  /api/auth                     — Get account & routing numbers`);
   console.log(`  POST /api/login/link-token         — Create login Link token`);
   console.log(`  POST /api/login/verify             — Exchange token + verify identity`);
+  console.log(`  GET  /api/liabilities              — Get credit card and loan liabilities`);
   if (config.plaid.env === "sandbox") {
     console.log(`  POST /api/sandbox/token/create     — Create sandbox test item`);
     console.log(`  POST /api/sandbox/webhook/fire     — Fire sandbox webhook`);
