@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlaidConnect — Link Bank Account</title>
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 480px;
+      margin: 60px auto;
+      padding: 0 20px;
+      color: #1a1a1a;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    p  { color: #555; margin-top: 0; }
+    label {
+      display: block;
+      margin: 16px 0 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #333;
+    }
+    input[type="text"], input[type="password"], select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+    }
+    input:focus { border-color: #0a85d1; }
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+      background: #0a85d1;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:disabled { background: #9cc; cursor: not-allowed; }
+    #status {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      white-space: pre-wrap;
+      display: none;
+    }
+    #status.ok   { background: #e6f4ea; color: #137333; display: block; }
+    #status.err  { background: #fce8e6; color: #a50e0e; display: block; }
+    #status.info { background: #e8f0fe; color: #1557b0; display: block; }
+    .hint {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 4px;
+    }
+    details {
+      margin-top: 24px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    summary { font-weight: 600; cursor: pointer; }
+    code {
+      background: #eee;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+  </style>
+</head>
+<body>
+  <h1>PlaidConnect</h1>
+  <p>Link a bank account to your PlaidConnect server.</p>
+
+  <label for="serverUrl">Server URL</label>
+  <input type="text" id="serverUrl" value="http://192.168.1.170:3000">
+  <div class="hint">Where your PlaidConnect server is running. Update this to the LAN IP of the machine running the server (e.g. 192.168.1.x).</div>
+
+  <label for="apiKey">API Key</label>
+  <input type="password" id="apiKey" placeholder="your-api-key">
+  <div class="hint">Must match the <code>API_KEY</code> env var on the server.</div>
+
+  <label for="userId">User ID</label>
+  <input type="text" id="userId" value="user-123" placeholder="e.g. user-123">
+
+  <label for="products">Plaid Products</label>
+  <select id="products" multiple size="3">
+    <option value="auth" selected>auth</option>
+    <option value="transactions" selected>transactions</option>
+    <option value="identity">identity</option>
+  </select>
+  <div class="hint">Hold Ctrl/Cmd to select multiple.</div>
+
+  <button id="linkBtn">Connect Bank Account</button>
+
+  <div id="status"></div>
+
+  <details>
+    <summary>Setup notes</summary>
+    <p><strong>CORS:</strong> Your server allows any origin by default (<code>CORS_ORIGIN=*</code>). Serve this file so it's reachable on your LAN:</p>
+    <pre><code>npx serve -p 5173 -l tcp://0.0.0.0:5173</code></pre>
+    <p>Or with Python:</p>
+    <pre><code>python3 -m http.server 5173</code></pre>
+    <p>Then open <code>http://192.168.1.170:5173</code> from any device on the network.</p>
+  </details>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const status = $('status');
+    const linkBtn = $('linkBtn');
+
+    function show(msg, type = 'info') {
+      status.textContent = msg;
+      status.className = type;
+    }
+
+    function getSelectedProducts() {
+      return Array.from($('products').selectedOptions).map(o => o.value);
+    }
+
+    async function createLinkToken() {
+      const url = $('serverUrl').value.replace(/\/$/, '');
+      const apiKey = $('apiKey').value;
+      const userId = $('userId').value;
+
+      if (!apiKey || !userId) {
+        show('Please enter an API key and user ID.', 'err');
+        return null;
+      }
+
+      show('Creating link token...', 'info');
+      linkBtn.disabled = true;
+
+      try {
+        const res = await fetch(`${url}/api/link/token/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            userId,
+            products: getSelectedProducts()
+          })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `Server returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        return data.linkToken;
+      } catch (e) {
+        show(`Failed to create link token:\n${e.message}`, 'err');
+        return null;
+      } finally {
+        linkBtn.disabled = false;
+      }
+    }
+
+    async function exchangeToken(publicToken) {
+      const url = $('serverUrl').value.replace(/\/$/, '');
+      const apiKey = $('apiKey').value;
+      const userId = $('userId').value;
+
+      show('Exchanging public token...', 'info');
+      linkBtn.disabled = true;
+
+      try {
+        const res = await fetch(`${url}/api/link/token/exchange`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({ publicToken, userId })
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || `Server returned ${res.status}`);
+        }
+
+        const data = await res.json();
+        show(
+          `Account connected!\n\n` +
+          `Item ID:      ${data.itemId}\n` +
+          `Institution:  ${data.institutionName || 'N/A'}\n` +
+          `Products:     ${(data.availableProducts || []).join(', ')}`,
+          'ok'
+        );
+      } catch (e) {
+        show(`Exchange failed:\n${e.message}`, 'err');
+      } finally {
+        linkBtn.disabled = false;
+      }
+    }
+
+    linkBtn.addEventListener('click', async () => {
+      const token = await createLinkToken();
+      if (!token) return;
+
+      show('Opening Plaid Link...', 'info');
+
+      const handler = Plaid.create({
+        token: token,
+        onSuccess: (public_token, metadata) => {
+          exchangeToken(public_token);
+        },
+        onExit: (err, metadata) => {
+          if (err) {
+            show(`Plaid Link error: ${err.display_message || err.error_message}`, 'err');
+          } else {
+            show('User exited Plaid Link without selecting a bank.', 'info');
+          }
+          linkBtn.disabled = false;
+        },
+        onEvent: (eventName, metadata) => {
+          // Optional: log events
+        }
+      });
+
+      handler.open();
+    });
+  </script>
+</body>
+</html>

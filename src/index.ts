@@ -1,3 +1,4 @@
+import "express-async-errors";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -87,8 +88,8 @@ if (config.plaid.env === "sandbox") {
 
 app.use(errorHandler);
 
-app.listen(config.server.port, () => {
-  console.log(`\nPlaidConnect server running on http://localhost:${config.server.port}`);
+app.listen(config.server.port, "0.0.0.0", () => {
+  console.log(`\nPlaidConnect server running on http://0.0.0.0:${config.server.port}`);
   console.log(`Environment: ${config.plaid.env}`);
   console.log(`Auth:      API key required on all /api/* routes`);
   console.log(`Webhooks:  JWS signature verification enabled`);
