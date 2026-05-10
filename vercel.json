@@ -1,8 +1,8 @@
 {
   "version": 2,
+  "cleanUrls": true,
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.ts" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/public/$1" }
+    { "handle": "filesystem" }
   ]
 }
