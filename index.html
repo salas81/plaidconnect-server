@@ -101,6 +101,10 @@
   </select>
   <div class="hint">Hold Ctrl/Cmd to select multiple.</div>
 
+  <label for="institutionId">Institution ID (optional)</label>
+  <input type="text" id="institutionId" placeholder="e.g. ins_136100">
+  <div class="hint">Skip search and go straight to a specific bank (e.g. Bilt Rewards).</div>
+
   <button id="linkBtn">Connect Bank Account</button>
 
   <hr style="margin: 32px 0; border: 0; border-top: 1px solid #ddd;">
@@ -160,16 +164,22 @@
       linkBtn.disabled = true;
 
       try {
+        const body = {
+          userId,
+          products: getSelectedProducts()
+        };
+        const institutionId = $('institutionId').value.trim();
+        if (institutionId) {
+          body.institutionId = institutionId;
+        }
+
         const res = await fetch(`${url}/api/link/token/create`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`
           },
-          body: JSON.stringify({
-            userId,
-            products: getSelectedProducts()
-          })
+          body: JSON.stringify(body)
         });
 
         if (!res.ok) {

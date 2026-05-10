@@ -6,7 +6,7 @@ import type { LinkTokenRequest, ExchangeTokenRequest } from "../types/index.js";
 export const linkRouter = Router();
 
 linkRouter.post("/token/create", async (req: Request, res: Response) => {
-  const { userId, products, countryCodes, language, redirectUri, webhookUrl } = req.body as LinkTokenRequest;
+  const { userId, products, countryCodes, language, redirectUri, webhookUrl, institutionId } = req.body as LinkTokenRequest;
 
   if (!userId) {
     res.status(400).json({ error: "userId is required" });
@@ -29,7 +29,7 @@ linkRouter.post("/token/create", async (req: Request, res: Response) => {
     (p) => p !== "auth" && p !== "transactions"
   );
 
-  const linkTokenResponse = await plaidClient.linkTokenCreate({
+  const linkTokenRequest: any = {
     user: { client_user_id: userId },
     client_name: "PlaidConnect",
     products: (coreProducts as any).length ? (coreProducts as any) : ["auth" as any],
@@ -38,7 +38,13 @@ linkRouter.post("/token/create", async (req: Request, res: Response) => {
     language: language || "en",
     redirect_uri: redirectUri,
     webhook: webhookUrl,
-  });
+  };
+
+  if (institutionId) {
+    linkTokenRequest.institution_id = institutionId;
+  }
+
+  const linkTokenResponse = await plaidClient.linkTokenCreate(linkTokenRequest);
 
   res.json({
     linkToken: linkTokenResponse.data.link_token,

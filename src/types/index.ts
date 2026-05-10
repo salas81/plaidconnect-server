@@ -17,6 +17,7 @@ export interface LinkTokenRequest {
   products?: string[];
   countryCodes?: string[];
   language?: string;
+  institutionId?: string;
 }
 
 export interface ExchangeTokenRequest {
