@@ -92,34 +92,36 @@ if (config.plaid.env === "sandbox") {
 
 app.use(errorHandler);
 
-app.listen(config.server.port, "0.0.0.0", () => {
-  console.log(`\nPlaidConnect server running on http://0.0.0.0:${config.server.port}`);
-  console.log(`Environment: ${config.plaid.env}`);
-  console.log(`Auth:      API key required on all /api/* routes`);
-  console.log(`Webhooks:  JWS signature verification enabled`);
-  console.log(`CORS:      ${config.server.corsOrigin}`);
-  console.log(`Endpoints:`);
-  console.log(`  POST /api/link/token/create       — Create Link token`);
-  console.log(`  POST /api/link/token/exchange     — Exchange public token`);
-  console.log(`  GET  /api/items                    — List items`);
-  console.log(`  GET  /api/items/:itemId            — Get item details`);
-  console.log(`  DELETE /api/items/:itemId          — Remove item`);
-  console.log(`  GET  /api/accounts                 — Get accounts`);
-  console.log(`  GET  /api/accounts/balance         — Get real-time balances`);
-  console.log(`  GET  /api/transactions             — Get transactions`);
-  console.log(`  GET  /api/transactions/sync        — Sync transactions (cursor-based)`);
-  console.log(`  POST /api/transactions/refresh     — Force transaction refresh`);
-  console.log(`  GET  /api/identity                 — Get identity data`);
-  console.log(`  GET  /api/auth                     — Get account & routing numbers`);
-  console.log(`  POST /api/login/link-token         — Create login Link token`);
-  console.log(`  POST /api/login/verify             — Exchange token + verify identity`);
-  console.log(`  GET  /api/liabilities              — Get credit card and loan liabilities`);
-  if (config.plaid.env === "sandbox") {
-    console.log(`  POST /api/sandbox/token/create     — Create sandbox test item`);
-    console.log(`  POST /api/sandbox/webhook/fire     — Fire sandbox webhook`);
-  }
-  console.log(`  POST /api/webhooks/plaid           — Receive webhooks`);
-  console.log(`  GET  /health                       — Health check\n`);
-});
+if (!process.env.VERCEL) {
+  app.listen(config.server.port, "0.0.0.0", () => {
+    console.log(`\nPlaidConnect server running on http://0.0.0.0:${config.server.port}`);
+    console.log(`Environment: ${config.plaid.env}`);
+    console.log(`Auth:      API key required on all /api/* routes`);
+    console.log(`Webhooks:  JWS signature verification enabled`);
+    console.log(`CORS:      ${config.server.corsOrigin}`);
+    console.log(`Endpoints:`);
+    console.log(`  POST /api/link/token/create       — Create Link token`);
+    console.log(`  POST /api/link/token/exchange     — Exchange public token`);
+    console.log(`  GET  /api/items                    — List items`);
+    console.log(`  GET  /api/items/:itemId            — Get item details`);
+    console.log(`  DELETE /api/items/:itemId          — Remove item`);
+    console.log(`  GET  /api/accounts                 — Get accounts`);
+    console.log(`  GET  /api/accounts/balance         — Get real-time balances`);
+    console.log(`  GET  /api/transactions             — Get transactions`);
+    console.log(`  GET  /api/transactions/sync        — Sync transactions (cursor-based)`);
+    console.log(`  POST /api/transactions/refresh     — Force transaction refresh`);
+    console.log(`  GET  /api/identity                 — Get identity data`);
+    console.log(`  GET  /api/auth                     — Get account & routing numbers`);
+    console.log(`  POST /api/login/link-token         — Create login Link token`);
+    console.log(`  POST /api/login/verify             — Exchange token + verify identity`);
+    console.log(`  GET  /api/liabilities              — Get credit card and loan liabilities`);
+    if (config.plaid.env === "sandbox") {
+      console.log(`  POST /api/sandbox/token/create     — Create sandbox test item`);
+      console.log(`  POST /api/sandbox/webhook/fire     — Fire sandbox webhook`);
+    }
+    console.log(`  POST /api/webhooks/plaid           — Receive webhooks`);
+    console.log(`  GET  /health                       — Health check\n`);
+  });
+}
 
 export default app;

@@ -82,8 +82,8 @@
   <p>Link a bank account to your PlaidConnect server.</p>
 
   <label for="serverUrl">Server URL</label>
-  <input type="text" id="serverUrl" value="http://192.168.1.170:3000">
-  <div class="hint">Where your PlaidConnect server is running. Update this to the LAN IP of the machine running the server (e.g. 192.168.1.x).</div>
+  <input type="text" id="serverUrl" value="" placeholder="Leave empty for same-origin (Vercel)">
+  <div class="hint">Leave empty when deployed on Vercel. For local dev, enter http://localhost:3000.</div>
 
   <label for="apiKey">API Key</label>
   <input type="password" id="apiKey" placeholder="your-api-key">
