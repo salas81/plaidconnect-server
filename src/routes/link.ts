@@ -15,10 +15,25 @@ linkRouter.post("/token/create", async (req: Request, res: Response) => {
 
   const requestedProducts: string[] = products || ["auth", "transactions"];
 
+  // Core products that filter the institution list.
+  // Only institutions supporting ALL of these are shown.
+  const coreProducts = requestedProducts.filter(
+    (p) => p === "auth" || p === "transactions"
+  );
+
+  // Products that are consented IF the institution supports them,
+  // but institutions are NOT hidden if they don't support them.
+  // This lets you see Bilt Rewards (no liabilities) AND BofA (has liabilities)
+  // in the same list, and consent is collected automatically per-bank.
+  const requiredIfSupported = requestedProducts.filter(
+    (p) => p !== "auth" && p !== "transactions"
+  );
+
   const linkTokenResponse = await plaidClient.linkTokenCreate({
     user: { client_user_id: userId },
     client_name: "PlaidConnect",
-    products: (requestedProducts as any),
+    products: (coreProducts as any).length ? (coreProducts as any) : ["auth" as any],
+    required_if_supported_products: requiredIfSupported.length ? (requiredIfSupported as any) : undefined,
     country_codes: (countryCodes as any) || ["US" as any],
     language: language || "en",
     redirect_uri: redirectUri,
