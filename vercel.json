@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "plaidconnect",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.ts" }
   ]
