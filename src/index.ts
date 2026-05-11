@@ -25,18 +25,10 @@ const app = express();
 // Security headers (CSP, X-Frame-Options, HSTS, etc.)
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.plaid.com"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        connectSrc: ["'self'", "https://*.plaid.com", "https://*.vercel.app"],
-        imgSrc: ["'self'", "data:", "https://*.plaid.com"],
-        fontSrc: ["'self'"],
-        frameSrc: ["'self'", "https://*.plaid.com", "https://*.vercel.app"],
-        objectSrc: ["'none'"],
-      },
-    },
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
   })
 );
 
